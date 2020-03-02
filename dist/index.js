@@ -5549,6 +5549,7 @@ const ServiceIdentifier = 'main.go';
 class File {
     constructor() {
         this.filename = ''; // e.g. foobar/main.go
+        this.previous_filename = ''; // e.g. barfoo/main.go
         this.status = 'unknown'; // e.g. added, modified, removed
     }
 }
@@ -5592,7 +5593,17 @@ function getFilesChanged(gh, commitIDs) {
                     return gh.repos.getCommit(Object.assign(Object.assign({}, args), { ref }));
                 })));
                 resolve(responses.reduce((group, res) => {
-                    const files = res.data.files.filter((f) => f.status !== 'renamed');
+                    const files = res.data.files.reduce((arr, file) => {
+                        if (file.status !== 'renamed')
+                            return [...arr, file];
+                        // To keep logic consistent, map renamed file changes to seperate
+                        // added and removed filechange.
+                        return [
+                            ...arr,
+                            { filename: file.filename, status: 'added' },
+                            { filename: file.previous_filename, status: 'removed' },
+                        ];
+                    }, []);
                     return [...group, ...files];
                 }, []));
             }

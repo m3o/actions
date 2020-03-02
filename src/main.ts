@@ -10,6 +10,7 @@ const ServiceIdentifier = 'main.go'
 // File is the object type returned by the GitHub API
 class File {
   filename: string = '' // e.g. foobar/main.go
+  previous_filename?: string = '' // e.g. barfoo/main.go
   status: 'added' | 'modified' | 'removed' | 'renamed' | 'unknown' = 'unknown' // e.g. added, modified, removed
 }
 
@@ -62,9 +63,18 @@ async function getFilesChanged(
 
       resolve(
         responses.reduce((group, res) => {
-          const files = res.data.files.filter(
-            (f: File) => f.status !== 'renamed'
-          )
+          const files = res.data.files.reduce((arr: File[], file: File) => {
+            if (file.status !== 'renamed') return [...arr, file]
+
+            // To keep logic consistent, map renamed file changes to seperate
+            // added and removed filechange.
+            return [
+              ...arr,
+              {filename: file.filename, status: 'added'},
+              {filename: file.previous_filename, status: 'removed'}
+            ]
+          }, [])
+
           return [...group, ...files]
         }, [])
       )
