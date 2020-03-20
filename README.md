@@ -1,5 +1,10 @@
-# GitHub Action: Changed Services
-Assuing a mono-repo folder structure, where the top level directories are services,
+# Actions
+
+Actions is a GitHub Action for Micro services.
+
+# Overview 
+
+Assuming a mono-repo folder structure, where the top level directories are services,
 this GitHub action extracts the services which were modified in the last commit. It
 works for both single commits and pull requests.
 
