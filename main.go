@@ -3,10 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -23,23 +20,6 @@ type Action struct {
 }
 
 func main() {
-	if err := ioutil.WriteFile("Dockerfile", []byte(Dockerfile), 0644); err != nil {
-		panic(err)
-	}
-
-	// debugging
-	err := filepath.Walk(".",
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			fmt.Println(path)
-			return nil
-		})
-	if err != nil {
-		log.Println(err)
-	}
-
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		panic(err)
@@ -78,7 +58,7 @@ func (a *Action) BuildAndPush(dir string) error {
 	ctxPath := fmt.Sprintf("/tmp/%v.tar", formattedDir)
 	tar := new(archivex.TarFile)
 	tar.Create(ctxPath)
-	tar.AddAll("image", true)
+	tar.Add("Dockerfile", strings.NewReader(Dockerfile), nil)
 	tar.AddAll(dir, true)
 	tar.Close()
 
