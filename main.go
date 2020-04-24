@@ -30,6 +30,11 @@ func main() {
 		panic("Missing GITHUB_REPOSITORY env var")
 	}
 
+	ghOwner := os.Getenv("GITHUB_REPOSITORY_OWNER")
+	if len(ghOwner) == 0 {
+		panic("Missing GITHUB_REPOSITORY_OWNER env var")
+	}
+
 	ghToken := os.Getenv("INPUT_GITHUB_TOKEN")
 	if len(ghToken) == 0 {
 		panic("Missing INPUT_GITHUB_TOKEN env var")
@@ -55,6 +60,7 @@ func main() {
 type Action struct {
 	cli         *client.Client
 	githubRepo  string
+	githubOwner string
 	githubToken string
 }
 
@@ -117,10 +123,12 @@ func (a *Action) BuildAndPush(dir string) error {
 
 func (a *Action) registryCreds() string {
 	creds := map[string]string{
+		"username":      a.githubOwner,
 		"password":      a.githubToken,
 		"serveraddress": githubRegistry,
 	}
 
 	bytes, _ := json.Marshal(creds)
+	fmt.Println(string(bytes))
 	return base64.StdEncoding.EncodeToString(bytes)
 }
