@@ -9,7 +9,8 @@ import (
 
 // ListChangedDirectories uses the commitHash to determine all the changes
 func (a *Action) ListChangedDirectories(commitHash string) (map[string]ServiceStatus, error) {
-	commit, _, err := a.client.Repositories.GetCommit(context.Background(), a.githubOwner, a.githubRepo, commitHash)
+	repo := strings.TrimPrefix(a.githubRepo, a.githubOwner+"/")
+	commit, _, err := a.client.Repositories.GetCommit(context.Background(), a.githubOwner, repo, commitHash)
 	if err != nil {
 		return nil, err
 	}
