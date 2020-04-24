@@ -1,17 +1,10 @@
 FROM golang:1.13 as builder
-
-WORKDIR /app
-COPY . /app
-
-# Statically compile our app for use in a distroless container
+WORKDIR /src/action
+COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-w -s" -v -o app .
 
 # A distroless container image with some basics like SSL certificates
 # https://github.com/GoogleContainerTools/distroless
 FROM gcr.io/distroless/static
-WORKDIR action
-COPY --from=builder /app/app /app
-COPY --from=builder /app/image /image
-# todo: remove test
-COPY --from=builder /app/test /test 
-ENTRYPOINT ["/app"]
+COPY --from=builder /src/action /action
+ENTRYPOINT ["/action/app"]

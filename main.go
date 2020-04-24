@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -12,44 +13,40 @@ import (
 	"github.com/jhoonb/archivex"
 )
 
-var (
-	testDir  = "test"
-	testRepo = "docker.pkg.github.com/ben-toogood/m3o-test/test:latest"
-)
+// Action builds docker images
+type Action struct {
+	cli        *client.Client
+	repository string
+}
 
 func main() {
-	fmt.Printf("CI: %v\n", os.Getenv("CI"))
-	fmt.Printf("HOME: %v\n", os.Getenv("HOME"))
-	fmt.Printf("GITHUB_WORKFLOW: %v\n", os.Getenv("GITHUB_WORKFLOW"))
-	fmt.Printf("GITHUB_RUN_ID: %v\n", os.Getenv("GITHUB_RUN_ID"))
-	fmt.Printf("GITHUB_RUN_NUMBER: %v\n", os.Getenv("GITHUB_RUN_NUMBER"))
-	fmt.Printf("GITHUB_ACTION: %v\n", os.Getenv("GITHUB_ACTION"))
-	fmt.Printf("GITHUB_ACTIONS: %v\n", os.Getenv("GITHUB_ACTIONS"))
-	fmt.Printf("GITHUB_ACTOR: %v\n", os.Getenv("GITHUB_ACTOR"))
-	fmt.Printf("GITHUB_REPOSITORY: %v\n", os.Getenv("GITHUB_REPOSITORY"))
-	fmt.Printf("GITHUB_EVENT_NAME: %v\n", os.Getenv("GITHUB_EVENT_NAME"))
-	fmt.Printf("GITHUB_EVENT_PATH: %v\n", os.Getenv("GITHUB_EVENT_PATH"))
-	fmt.Printf("GITHUB_WORKSPACE: %v\n", os.Getenv("GITHUB_WORKSPACE"))
-	fmt.Printf("GITHUB_SHA: %v\n", os.Getenv("GITHUB_SHA"))
-	fmt.Printf("GITHUB_REF: %v\n", os.Getenv("GITHUB_REF"))
-	fmt.Printf("GITHUB_HEAD_REF: %v\n", os.Getenv("GITHUB_HEAD_REF"))
-	fmt.Printf("GITHUB_BASE_REF: %v\n", os.Getenv("GITHUB_BASE_REF"))
-
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		panic(err)
 	}
 
-	if err := buildService(cli, testDir); err != nil {
+	ghRepo := os.Getenv("GITHUB_REPOSITORY")
+	if len(ghRepo) == 0 {
+		panic("Missing GITHUB_REPOSITORY env var")
+	}
+
+	repo := "docker.pkg.github.com/" + ghRepo
+	a := Action{cli: cli, repository: repo}
+
+	if err := a.BuildAndPush("test"); err != nil {
 		panic(err)
 	}
 }
 
-func buildService(cli *client.Client, dir string) error {
+// BuildAndPush a docker image using the directory provided
+func (a *Action) BuildAndPush(dir string) error {
+	// e.g. docker.pkg.github.com/micro/services/foobar-api:latest
+	tag := fmt.Sprintf("%v/%v:latest", a.repository, strings.ReplaceAll(dir, "/", "-"))
+
 	opt := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Dockerfile:     "image/go/Dockerfile",
-		Tags:           []string{testRepo},
+		Tags:           []string{tag},
 		BuildArgs: map[string]*string{
 			"service_dir": &dir,
 		},
@@ -67,7 +64,7 @@ func buildService(cli *client.Client, dir string) error {
 	}
 	defer buildCtx.Close()
 
-	buildRsp, err := cli.ImageBuild(context.Background(), buildCtx, opt)
+	buildRsp, err := a.cli.ImageBuild(context.Background(), buildCtx, opt)
 	if err != nil {
 		return err
 	}
@@ -79,8 +76,7 @@ func buildService(cli *client.Client, dir string) error {
 		return err
 	}
 
-	pushOpts := types.ImagePushOptions{}
-	pushRsp, err := cli.ImagePush(context.Background(), testRepo, pushOpts)
+	pushRsp, err := a.cli.ImagePush(context.Background(), tag, types.ImagePushOptions{})
 	if err != nil {
 		return err
 	}
