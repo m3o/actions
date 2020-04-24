@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -20,6 +22,19 @@ type Action struct {
 }
 
 func main() {
+	// debugging
+	err := filepath.Walk(".",
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			fmt.Println(path)
+			return nil
+		})
+	if err != nil {
+		log.Println(err)
+	}
+
 	cli, err := client.NewEnvClient()
 	if err != nil {
 		panic(err)
@@ -40,8 +55,11 @@ func main() {
 
 // BuildAndPush a docker image using the directory provided
 func (a *Action) BuildAndPush(dir string) error {
+	// e.g. foobar/api => foobar-api
+	formattedDir := strings.ReplaceAll(dir, "/", "-")
+
 	// e.g. docker.pkg.github.com/micro/services/foobar-api:latest
-	tag := fmt.Sprintf("%v/%v:latest", a.repository, strings.ReplaceAll(dir, "/", "-"))
+	tag := fmt.Sprintf("%v/%v:latest", a.repository, formattedDir)
 
 	opt := types.ImageBuildOptions{
 		SuppressOutput: false,
@@ -52,13 +70,14 @@ func (a *Action) BuildAndPush(dir string) error {
 		},
 	}
 
+	ctxPath := fmt.Sprintf("/tmp/%v.tar", formattedDir)
 	tar := new(archivex.TarFile)
-	tar.Create("/tmp/test.tar")
+	tar.Create(ctxPath)
 	tar.AddAll("image", true)
 	tar.AddAll(dir, true)
 	tar.Close()
 
-	buildCtx, err := os.Open("/tmp/test.tar")
+	buildCtx, err := os.Open(ctxPath)
 	if err != nil {
 		return err
 	}

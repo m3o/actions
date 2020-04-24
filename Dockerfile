@@ -8,5 +8,4 @@ RUN CGO_ENABLED=0 go build -ldflags="-w -s" -v -o action .
 # FROM gcr.io/distroless/static
 FROM alpine
 COPY --from=builder /app .
-# ENTRYPOINT ["./action"]
-ENTRYPOINT ["ls"]
+ENTRYPOINT ["./action"]
