@@ -1,9 +1,10 @@
-name: Micro
-description: Extract the services which have changed in the last commit.
-author: Ben Toogood
+name: "M3O Action"
+description: "Build your services and run them on M3O"
+author: "Micro"
 inputs:
-  githubToken:
-    description: Your GitHub token. Provided by GitHub automatically.
+  apikey:
+    description: "Your M3O Deployment Key"
+    required: true
 runs:
-  using: 'node12'
-  main: 'dist/index.js'
+  using: "docker"
+  image: "Dockerfile"
