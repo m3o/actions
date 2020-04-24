@@ -7,7 +7,6 @@ name: M3O
 
 on: 
   push:
-  pull_request:
     branches:
       - master
 
