@@ -30,14 +30,14 @@ func main() {
 		panic("Missing GITHUB_REPOSITORY env var")
 	}
 
-	ghToken := os.Getenv("GITHUB_TOKEN")
+	ghToken := os.Getenv("INPUT_GITHUB_TOKEN")
 	if len(ghToken) == 0 {
-		panic("Missing GITHUB_TOKEN env var")
+		panic("Missing INPUT_GITHUB_TOKEN env var")
 	}
 
-	apiKey := os.Getenv("API_KEY")
+	apiKey := os.Getenv("INPUT_API_KEY")
 	if len(apiKey) == 0 {
-		panic("Missing API_KEY env var")
+		panic("Missing INPUT_API_KEY env var")
 	}
 
 	a := Action{
