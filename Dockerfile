@@ -7,6 +7,5 @@ RUN CGO_ENABLED=0 go build -ldflags="-w -s" -v -o build .
 # https://github.com/GoogleContainerTools/distroless
 FROM alpine
 # FROM gcr.io/distroless/static
-COPY --from=builder . .
-WORKDIR /app
-ENTRYPOINT ["/app/build"]
+COPY --from=builder app ./ 
+ENTRYPOINT ["/build"]
