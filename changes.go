@@ -17,6 +17,11 @@ func (a *Action) ListChangedDirectories(commitHash string) (map[string]ServiceSt
 
 	filesToStatuses := []fileToStatus{}
 	for _, v := range commit.Files {
+		// skip files starting with . e.g. ".github"
+		if strings.HasPrefix(v.GetFilename(), ".") {
+			continue
+		}
+
 		filesToStatuses = append(filesToStatuses, fileToStatus{
 			fileName: v.GetFilename(),
 			status:   GithubFileChangeStatus(v.GetStatus()),

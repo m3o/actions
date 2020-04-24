@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/docker/docker/client"
 	"github.com/google/go-github/v30/github"
+	"golang.org/x/oauth2"
 )
 
 func main() {
@@ -15,9 +17,13 @@ func main() {
 		panic(err)
 	}
 
+	tc := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: getEnv("INPUT_GITHUB_TOKEN")},
+	))
+
 	a := Action{
 		docker:      docker,
-		client:      github.NewClient(nil),
+		client:      github.NewClient(tc),
 		apiKey:      getEnv("INPUT_API_KEY"),
 		githubRepo:  getEnv("GITHUB_REPOSITORY"),
 		githubOwner: getEnv("GITHUB_REPOSITORY_OWNER"),
