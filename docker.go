@@ -129,6 +129,5 @@ func (a *Action) registryCreds() string {
 	}
 
 	bytes, _ := json.Marshal(creds)
-	fmt.Println(string(bytes))
 	return base64.StdEncoding.EncodeToString(bytes)
 }
