@@ -5,7 +5,8 @@ RUN CGO_ENABLED=0 go build -ldflags="-w -s" -v -o build .
 
 # A distroless container image with some basics like SSL certificates
 # https://github.com/GoogleContainerTools/distroless
-FROM alpine
 # FROM gcr.io/distroless/static
-COPY --from=builder app ./ 
-ENTRYPOINT ["/build"]
+FROM alpine
+COPY --from=builder /app /app
+WORKDIR app
+CMD ["./build"]
