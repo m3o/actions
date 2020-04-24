@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -13,11 +15,9 @@ import (
 	"github.com/jhoonb/archivex"
 )
 
-// Action builds docker images
-type Action struct {
-	cli        *client.Client
-	repository string
-}
+const (
+	githubRegistry = "docker.pkg.github.com"
+)
 
 func main() {
 	cli, err := client.NewEnvClient()
@@ -30,12 +30,32 @@ func main() {
 		panic("Missing GITHUB_REPOSITORY env var")
 	}
 
-	repo := "docker.pkg.github.com/" + ghRepo
-	a := Action{cli: cli, repository: repo}
+	ghToken := os.Getenv("GITHUB_TOKEN")
+	if len(ghToken) == 0 {
+		panic("Missing GITHUB_TOKEN env var")
+	}
+
+	apiKey := os.Getenv("API_KEY")
+	if len(apiKey) == 0 {
+		panic("Missing API_KEY env var")
+	}
+
+	a := Action{
+		cli:         cli,
+		githubRepo:  ghRepo,
+		githubToken: ghToken,
+	}
 
 	if err := a.BuildAndPush("test"); err != nil {
 		panic(err)
 	}
+}
+
+// Action builds docker images
+type Action struct {
+	cli         *client.Client
+	githubRepo  string
+	githubToken string
 }
 
 // BuildAndPush a docker image using the directory provided
@@ -44,7 +64,7 @@ func (a *Action) BuildAndPush(dir string) error {
 	formattedDir := strings.ReplaceAll(dir, "/", "-")
 
 	// e.g. docker.pkg.github.com/micro/services/foobar-api:latest
-	tag := fmt.Sprintf("%v/%v:latest", a.repository, formattedDir)
+	tag := fmt.Sprintf("%v/%v/%v:latest", githubRegistry, a.githubRepo, formattedDir)
 
 	opt := types.ImageBuildOptions{
 		SuppressOutput: false,
@@ -80,7 +100,8 @@ func (a *Action) BuildAndPush(dir string) error {
 		return err
 	}
 
-	pushRsp, err := a.cli.ImagePush(context.Background(), tag, types.ImagePushOptions{})
+	pushOpts := types.ImagePushOptions{RegistryAuth: a.registryCreds()}
+	pushRsp, err := a.cli.ImagePush(context.Background(), tag, pushOpts)
 	if err != nil {
 		return err
 	}
@@ -92,4 +113,14 @@ func (a *Action) BuildAndPush(dir string) error {
 	}
 
 	return nil
+}
+
+func (a *Action) registryCreds() string {
+	creds := map[string]string{
+		"password":      a.githubToken,
+		"serveraddress": githubRegistry,
+	}
+
+	bytes, _ := json.Marshal(creds)
+	return base64.StdEncoding.EncodeToString(bytes)
 }

@@ -2,7 +2,10 @@ name: "M3O Action"
 description: "Build your services and run them on M3O"
 author: "Micro"
 inputs:
-  apikey:
+  githubToken:
+    description: "GitHub token"
+    required: true
+  apiKey:
     description: "Your M3O Deployment Key"
     required: true
 runs:
