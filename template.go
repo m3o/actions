@@ -1,3 +1,9 @@
+package main
+
+// Dockerfile template to use. GitHub actions only copies the entrypoint
+// into the docker container it starts when running an action, so we have
+// to write this file on each run...
+const Dockerfile = `
 FROM golang:1.13 as builder
 
 # Install Dumb Init
@@ -21,3 +27,4 @@ FROM gcr.io/distroless/static
 COPY --from=builder /go/service/app /service
 COPY --from=builder /go/dumb-init/dumb-init /dumb-init
 ENTRYPOINT ["dumb-init", "./service"]
+`

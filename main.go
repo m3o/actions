@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,6 +23,10 @@ type Action struct {
 }
 
 func main() {
+	if err := ioutil.WriteFile("Dockerfile", []byte(Dockerfile), 0644); err != nil {
+		panic(err)
+	}
+
 	// debugging
 	err := filepath.Walk(".",
 		func(path string, info os.FileInfo, err error) error {
@@ -63,7 +68,7 @@ func (a *Action) BuildAndPush(dir string) error {
 
 	opt := types.ImageBuildOptions{
 		SuppressOutput: false,
-		Dockerfile:     "image/go/Dockerfile",
+		Dockerfile:     "Dockerfile",
 		Tags:           []string{tag},
 		BuildArgs: map[string]*string{
 			"service_dir": &dir,
