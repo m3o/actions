@@ -48,6 +48,7 @@ func main() {
 	a := Action{
 		cli:         cli,
 		githubRepo:  ghRepo,
+		githubOwner: ghOwner,
 		githubToken: ghToken,
 	}
 
