@@ -9,25 +9,33 @@ import (
 	"net/http"
 )
 
-func New(clientID, clientSecret string) *Events {
+func New(clientID, clientSecret, commitID, buildID string) *Events {
 	apiKey, err := exchangeCreds(clientID, clientSecret)
 	if err != nil {
 		panic(err)
 	}
 
 	return &Events{
-		apiKey: apiKey,
-		client: new(http.Client),
+		apiKey:   apiKey,
+		buildID:  buildID,
+		commitID: commitID,
+		client:   new(http.Client),
 	}
 }
 
 type Events struct {
-	apiKey string
-	client *http.Client
+	apiKey   string
+	buildID  string
+	commitID string
+	client   *http.Client
 }
 
 func (e *Events) Create(dir, evType string, errs ...error) {
-	md := map[string]string{"service": dir}
+	md := map[string]string{
+		"service": dir,
+		"commit":  e.commitID,
+		"build":   e.buildID,
+	}
 	if len(errs) > 0 {
 		md["error"] = errs[0].Error()
 	}
