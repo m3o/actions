@@ -15,6 +15,7 @@ func main() {
 		getEnv("INPUT_GITHUB_TOKEN"),
 		getEnv("GITHUB_REPOSITORY"),
 		getEnv("GITHUB_REPOSITORY_OWNER"),
+		len(os.Getenv("INPUT_DEBUG_MODE")) > 0,
 	)
 
 	changes := changedetector.New(
@@ -35,17 +36,19 @@ func main() {
 	}
 
 	for dir, status := range dirs {
-		fmt.Printf("Processing %v status for %v dir\n", status, dir)
-
 		// can't build the image since the source no longer exists
 		if status == changedetector.StatusDeleted {
 			continue
 		}
 
 		events.Create(dir, "build_started")
+		fmt.Printf("[%v] Build Starting\n", dir)
+
 		if err := builder.Build(dir); err != nil {
+			fmt.Printf("[%v] Build Failed: %v\n", dir, err)
 			events.Create(dir, "build_failed", err)
 		} else {
+			fmt.Printf("[%v] Build Finished\n", dir)
 			events.Create(dir, "build_finished")
 		}
 	}

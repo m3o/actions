@@ -49,7 +49,7 @@ ENTRYPOINT ["dumb-init", "./service"]
 )
 
 // New returns an initialized builder
-func New(token, repo, owner string) *Builder {
+func New(token, repo, owner string, debug bool) *Builder {
 	docker, err := client.NewEnvClient()
 	if err != nil {
 		panic(err)
@@ -60,6 +60,7 @@ func New(token, repo, owner string) *Builder {
 		githubRepo:  repo,
 		githubOwner: owner,
 		githubToken: token,
+		debug:       debug,
 	}
 }
 
@@ -69,6 +70,7 @@ type Builder struct {
 	githubRepo  string
 	githubOwner string
 	githubToken string
+	debug       bool
 }
 
 // Build and pushe a docker image using the directory provided
@@ -116,6 +118,10 @@ func (b *Builder) build(dir, tag string) error {
 	}
 	defer buildRsp.Body.Close()
 
+	if !b.debug {
+		return nil
+	}
+
 	termFd, isTerm := term.GetFdInfo(os.Stdout)
 	return jsonmessage.DisplayJSONMessagesStream(buildRsp.Body, os.Stdout, termFd, isTerm, nil)
 }
@@ -128,6 +134,10 @@ func (b *Builder) push(tag string) error {
 		return err
 	}
 	defer pushRsp.Close()
+
+	if !b.debug {
+		return nil
+	}
 
 	termFd, isTerm := term.GetFdInfo(os.Stdout)
 	return jsonmessage.DisplayJSONMessagesStream(pushRsp, os.Stdout, termFd, isTerm, nil)

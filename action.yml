@@ -2,11 +2,17 @@ name: "M3O Action"
 description: "Build your services and run them on M3O"
 author: "Micro"
 inputs:
+  debugMode:
+    description: "Debug mode enabled"
+    required: false
   githubToken:
     description: "GitHub token"
     required: true
-  apiKey:
-    description: "Your M3O Deployment Key"
+  clientID:
+    description: "Your M3O Webhook Client ID"
+    required: true
+  clientSecret:
+    description: "Your M3O Webhook Client Secret"
     required: true
 runs:
   using: "docker"
