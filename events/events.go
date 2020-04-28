@@ -42,7 +42,7 @@ func (e *Events) Create(dir, evType string, errs ...error) {
 		},
 	})
 
-	req, _ := http.NewRequest("POST", "https://api.micro.mu/event/create", bytes.NewBuffer(reqBody))
+	req, _ := http.NewRequest("POST", "https://api.micro.mu/events/create", bytes.NewBuffer(reqBody))
 	req.Header.Set("Authorization", "Bearer "+e.apiKey)
 
 	rsp, err := e.client.Do(req)

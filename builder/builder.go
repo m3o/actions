@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -118,12 +119,13 @@ func (b *Builder) build(dir, tag string) error {
 	}
 	defer buildRsp.Body.Close()
 
-	if !b.debug {
-		return nil
+	if b.debug {
+		termFd, isTerm := term.GetFdInfo(os.Stdout)
+		return jsonmessage.DisplayJSONMessagesStream(buildRsp.Body, os.Stdout, termFd, isTerm, nil)
 	}
 
-	termFd, isTerm := term.GetFdInfo(os.Stdout)
-	return jsonmessage.DisplayJSONMessagesStream(buildRsp.Body, os.Stdout, termFd, isTerm, nil)
+	_, err = ioutil.ReadAll(buildRsp.Body)
+	return err
 }
 
 // push a tagged image to the image repo
@@ -135,12 +137,13 @@ func (b *Builder) push(tag string) error {
 	}
 	defer pushRsp.Close()
 
-	if !b.debug {
-		return nil
+	if b.debug {
+		termFd, isTerm := term.GetFdInfo(os.Stdout)
+		return jsonmessage.DisplayJSONMessagesStream(pushRsp, os.Stdout, termFd, isTerm, nil)
 	}
 
-	termFd, isTerm := term.GetFdInfo(os.Stdout)
-	return jsonmessage.DisplayJSONMessagesStream(pushRsp, os.Stdout, termFd, isTerm, nil)
+	_, err = ioutil.ReadAll(buildRsp.Body)
+	return err
 }
 
 func (b *Builder) registryCreds() string {
