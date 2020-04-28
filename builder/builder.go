@@ -142,7 +142,7 @@ func (b *Builder) push(tag string) error {
 		return jsonmessage.DisplayJSONMessagesStream(pushRsp, os.Stdout, termFd, isTerm, nil)
 	}
 
-	_, err = ioutil.ReadAll(buildRsp.Body)
+	_, err = ioutil.ReadAll(pushRsp)
 	return err
 }
 
