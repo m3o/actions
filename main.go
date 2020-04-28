@@ -1,36 +1,35 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/docker/docker/client"
-	"github.com/google/go-github/v30/github"
-	"golang.org/x/oauth2"
+	"github.com/micro/actions/builder"
+	"github.com/micro/actions/changedetector"
+	"github.com/micro/actions/events"
 )
 
 func main() {
-	docker, err := client.NewEnvClient()
-	if err != nil {
-		panic(err)
-	}
+	builder := builder.New(
+		getEnv("INPUT_GITHUB_TOKEN"),
+		getEnv("GITHUB_REPOSITORY"),
+		getEnv("GITHUB_REPOSITORY_OWNER"),
+	)
 
-	tc := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: getEnv("INPUT_GITHUB_TOKEN")},
-	))
+	changes := changedetector.New(
+		getEnv("INPUT_GITHUB_TOKEN"),
+		getEnv("GITHUB_REPOSITORY"),
+		getEnv("GITHUB_REPOSITORY_OWNER"),
+		getEnv("GITHUB_SHA"),
+	)
 
-	a := Action{
-		docker:      docker,
-		client:      github.NewClient(tc),
-		apiKey:      getEnv("INPUT_API_KEY"),
-		githubRepo:  getEnv("GITHUB_REPOSITORY"),
-		githubOwner: getEnv("GITHUB_REPOSITORY_OWNER"),
-		githubToken: getEnv("INPUT_GITHUB_TOKEN"),
-	}
+	events := events.New(
+		getEnv("INPUT_CLIENT_ID"),
+		getEnv("INPUT_CLIENT_SECRET"),
+	)
 
-	dirs, err := a.ListChangedDirectories(getEnv("GITHUB_SHA"))
+	dirs, err := changes.List()
 	if err != nil {
 		panic(err)
 	}
@@ -39,12 +38,15 @@ func main() {
 		fmt.Printf("Processing %v status for %v dir\n", status, dir)
 
 		// can't build the image since the source no longer exists
-		if status == ServiceStatusDeleted {
+		if status == changedetector.StatusDeleted {
 			continue
 		}
 
-		if err := a.BuildAndPush(dir); err != nil {
-			panic(err)
+		events.Create(dir, "build_started")
+		if err := builder.Build(dir); err != nil {
+			events.Create(dir, "build_failed", err)
+		} else {
+			events.Create(dir, "build_finished")
 		}
 	}
 }

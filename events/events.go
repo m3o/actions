@@ -1,0 +1,94 @@
+package events
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+)
+
+func New(clientID, clientSecret string) *Events {
+	apiKey, err := exchangeCreds(clientID, clientSecret)
+	if err != nil {
+		panic(err)
+	}
+
+	return &Events{
+		apiKey: apiKey,
+		client: new(http.Client),
+	}
+}
+
+type Events struct {
+	apiKey string
+	client *http.Client
+}
+
+func (e *Events) Create(dir, evType string, errs ...error) {
+	var errStr string
+	if len(errs) > 0 {
+		errStr = errs[0].Error()
+	}
+
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"type": evType,
+		"metadata": map[string]string{
+			"directory": dir,
+			"service":   strings.ReplaceAll(dir, "/", "-"),
+			"error":     errStr,
+		},
+	})
+
+	req, _ := http.NewRequest("POST", "https://api.micro.mu/event/create", bytes.NewBuffer(reqBody))
+	req.Header.Set("Authorization", "Bearer "+e.apiKey)
+
+	rsp, err := e.client.Do(req)
+	if err != nil {
+		fmt.Println("Unable to connect to the Micro API")
+	}
+	defer rsp.Body.Close()
+
+	if rsp.StatusCode != http.StatusOK {
+		fmt.Println("Failed Request: " + rsp.Status)
+	}
+}
+
+// exchangeCreds exchanges a client id/secret for a token which
+// can be used to call the api
+func exchangeCreds(clientID, clientSecret string) (string, error) {
+	reqBody, err := json.Marshal(map[string]string{
+		"id":     clientID,
+		"secret": clientSecret,
+	})
+	if err != nil {
+		return "", errors.New("Invalid Client ID / Secret")
+	}
+
+	req, _ := http.NewRequest("POST", "https://api.micro.mu/auth/Login", bytes.NewBuffer(reqBody))
+	rsp, err := new(http.Client).Do(req)
+	if err != nil {
+		return "", errors.New("Error connecting to Micro API")
+	}
+	defer rsp.Body.Close()
+
+	if rsp.StatusCode != http.StatusOK {
+		return "", errors.New("Bad Credentials")
+	}
+
+	bytes, err := ioutil.ReadAll(rsp.Body)
+	if err != nil {
+		return "", errors.New("Invalid response from Micro API")
+	}
+
+	var data struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(bytes, &data); err != nil {
+		return "", errors.New("Invalid response from Micro API")
+	}
+
+	return data.Token, nil
+}

@@ -1,16 +1,39 @@
-package main
+package changedetector
 
 import (
 	"context"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/go-github/v30/github"
+	"golang.org/x/oauth2"
 )
 
-// ListChangedDirectories uses the commitHash to determine all the changes
-func (a *Action) ListChangedDirectories(commitHash string) (map[string]ServiceStatus, error) {
-	repo := strings.TrimPrefix(a.githubRepo, a.githubOwner+"/")
-	commit, _, err := a.client.Repositories.GetCommit(context.Background(), a.githubOwner, repo, commitHash)
+func New(ghToken, ghRepo, ghOwner, ghSHA string) *ChangeDetector {
+	tc := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: ghToken},
+	))
+
+	return &ChangeDetector{
+		client:      github.NewClient(tc),
+		githubRepo:  ghRepo,
+		githubOwner: ghOwner,
+		githubSHA:   ghSHA,
+	}
+}
+
+type ChangeDetector struct {
+	client      *github.Client
+	githubRepo  string
+	githubOwner string
+	githubSHA   string
+}
+
+// List uses the github sha to determine all the changes
+func (cd *ChangeDetector) List() (map[string]Status, error) {
+	repo := strings.TrimPrefix(cd.githubRepo, cd.githubOwner+"/")
+	commit, _, err := cd.client.Repositories.GetCommit(context.Background(), cd.githubOwner, repo, cd.githubSHA)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +47,7 @@ func (a *Action) ListChangedDirectories(commitHash string) (map[string]ServiceSt
 
 		filesToStatuses = append(filesToStatuses, fileToStatus{
 			fileName: v.GetFilename(),
-			status:   GithubFileChangeStatus(v.GetStatus()),
+			status:   githubFileChangeStatus(v.GetStatus()),
 		})
 	}
 
@@ -33,8 +56,8 @@ func (a *Action) ListChangedDirectories(commitHash string) (map[string]ServiceSt
 
 // maps github file change statuses to folders and their deployment status
 // ie. "asim/scheduler/main.go" "removed" will become "asim/scheduler" "deleted"
-func folderStatuses(statuses []fileToStatus) map[string]ServiceStatus {
-	folders := map[string]ServiceStatus{}
+func folderStatuses(statuses []fileToStatus) map[string]Status {
+	folders := map[string]Status{}
 	// Prioritize main.go creates and deletes
 	for _, status := range statuses {
 		fname := status.fileName
@@ -49,9 +72,9 @@ func folderStatuses(statuses []fileToStatus) map[string]ServiceStatus {
 			continue
 		}
 		if status == "added" {
-			folders[fold] = ServiceStatusCreated
+			folders[fold] = StatusCreated
 		} else if status == "removed" {
-			folders[fold] = ServiceStatusDeleted
+			folders[fold] = StatusDeleted
 		}
 
 	}
@@ -69,7 +92,7 @@ func folderStatuses(statuses []fileToStatus) map[string]ServiceStatus {
 			if exists {
 				continue
 			}
-			folders[fold] = ServiceStatusUpdated
+			folders[fold] = StatusUpdated
 		}
 	}
 	return folders
@@ -88,24 +111,24 @@ func topFolders(path string) []string {
 
 type fileToStatus struct {
 	fileName string
-	status   GithubFileChangeStatus
+	status   githubFileChangeStatus
 }
 
-type GithubFileChangeStatus string
+type githubFileChangeStatus string
 
 // a list of github file status changes.
 // not documented in the github API
 var (
-	GithubFileChangeStatusCreated  GithubFileChangeStatus = "added"
-	GithubFileChangeStatusChanged  GithubFileChangeStatus = "changed"
-	GithubFileChangeStatusModified GithubFileChangeStatus = "modified"
-	GithubFileChangeStatusRemoved  GithubFileChangeStatus = "removed"
+	githubFileChangeStatusCreated  githubFileChangeStatus = "added"
+	githubFileChangeStatusChanged  githubFileChangeStatus = "changed"
+	githubFileChangeStatusModified githubFileChangeStatus = "modified"
+	githubFileChangeStatusRemoved  githubFileChangeStatus = "removed"
 )
 
-type ServiceStatus string
+type Status string
 
 var (
-	ServiceStatusCreated ServiceStatus = "created"
-	ServiceStatusUpdated ServiceStatus = "updated"
-	ServiceStatusDeleted ServiceStatus = "deleted"
+	StatusCreated Status = "created"
+	StatusUpdated Status = "updated"
+	StatusDeleted Status = "deleted"
 )

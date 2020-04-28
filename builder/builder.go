@@ -1,4 +1,4 @@
-package main
+package builder
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/term"
-	"github.com/google/go-github/v30/github"
 	"github.com/jhoonb/archivex"
 )
 
@@ -49,33 +48,46 @@ ENTRYPOINT ["dumb-init", "./service"]
 `
 )
 
-// Action builds docker images
-type Action struct {
+// New returns an initialized builder
+func New(token, repo, owner string) *Builder {
+	docker, err := client.NewEnvClient()
+	if err != nil {
+		panic(err)
+	}
+
+	return &Builder{
+		docker:      docker,
+		githubRepo:  repo,
+		githubOwner: owner,
+		githubToken: token,
+	}
+}
+
+// Builder builds docker images
+type Builder struct {
 	docker      *client.Client
-	client      *github.Client
-	apiKey      string
 	githubRepo  string
 	githubOwner string
 	githubToken string
 }
 
-// BuildAndPush a docker image using the directory provided
-func (a *Action) BuildAndPush(dir string) error {
+// Build and pushe a docker image using the directory provided
+func (b *Builder) Build(dir string) error {
 	// e.g. foobar/api => foobar-api
 	formattedDir := strings.ReplaceAll(dir, "/", "-")
 
 	// e.g. docker.pkg.github.com/micro/services/foobar-api:latest
-	tag := fmt.Sprintf("%v/%v/%v:latest", githubRegistry, a.githubRepo, formattedDir)
+	tag := fmt.Sprintf("%v/%v/%v:latest", githubRegistry, b.githubRepo, formattedDir)
 
-	if err := a.build(dir, tag); err != nil {
+	if err := b.build(dir, tag); err != nil {
 		return err
 	}
 
-	return a.push(tag)
+	return b.push(tag)
 }
 
 // build a docker image using the directory provided
-func (a *Action) build(dir, tag string) error {
+func (b *Builder) build(dir, tag string) error {
 	opt := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Dockerfile:     "Dockerfile",
@@ -98,7 +110,7 @@ func (a *Action) build(dir, tag string) error {
 	}
 	defer buildCtx.Close()
 
-	buildRsp, err := a.docker.ImageBuild(context.Background(), buildCtx, opt)
+	buildRsp, err := b.docker.ImageBuild(context.Background(), buildCtx, opt)
 	if err != nil {
 		return err
 	}
@@ -109,9 +121,9 @@ func (a *Action) build(dir, tag string) error {
 }
 
 // push a tagged image to the image repo
-func (a *Action) push(tag string) error {
-	pushOpts := types.ImagePushOptions{RegistryAuth: a.registryCreds()}
-	pushRsp, err := a.docker.ImagePush(context.Background(), tag, pushOpts)
+func (b *Builder) push(tag string) error {
+	pushOpts := types.ImagePushOptions{RegistryAuth: b.registryCreds()}
+	pushRsp, err := b.docker.ImagePush(context.Background(), tag, pushOpts)
 	if err != nil {
 		return err
 	}
@@ -121,10 +133,10 @@ func (a *Action) push(tag string) error {
 	return jsonmessage.DisplayJSONMessagesStream(pushRsp, os.Stdout, termFd, isTerm, nil)
 }
 
-func (a *Action) registryCreds() string {
+func (b *Builder) registryCreds() string {
 	creds := map[string]string{
-		"username":      a.githubOwner,
-		"password":      a.githubToken,
+		"username":      b.githubOwner,
+		"password":      b.githubToken,
 		"serveraddress": githubRegistry,
 	}
 
