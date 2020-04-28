@@ -12,11 +12,13 @@ import (
 )
 
 func main() {
+	debugMode := len(os.Getenv("INPUT_DEBUG_MODE")) > 0
+
 	builder := builder.New(
 		getEnv("INPUT_GITHUB_TOKEN"),
 		getEnv("GITHUB_REPOSITORY"),
 		getEnv("GITHUB_REPOSITORY_OWNER"),
-		len(os.Getenv("INPUT_DEBUG_MODE")) > 0,
+		debugMode,
 	)
 
 	changes := changedetector.New(
@@ -30,7 +32,7 @@ func main() {
 		getEnv("INPUT_CLIENT_ID"),
 		getEnv("INPUT_CLIENT_SECRET"),
 		getEnv("GITHUB_SHA"),
-		getEnv("GITHUB_WORKFLOW"),
+		getEnv("GITHUB_ACTION"),
 	)
 
 	dirs, err := changes.List()
@@ -43,7 +45,7 @@ func main() {
 	wg.Add(len(dirs))
 
 	for dir, status := range dirs {
-		go func(dir string, status changedetector.Status) {
+		f := func(dir string, status changedetector.Status) {
 			// Send the source created/updated/deleted
 			// event. This is important since if the
 			// source has been deleted, the service must
@@ -83,7 +85,15 @@ func main() {
 			}
 
 			wg.Done()
-		}(dir, status)
+		}
+
+		// don't perform concurrently in debug mode since
+		// all the logs will be combined and unreadable
+		if debugMode {
+			f(dir, status)
+		} else {
+			go f(dir, status)
+		}
 	}
 
 	wg.Wait()
