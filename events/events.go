@@ -28,18 +28,16 @@ type Events struct {
 }
 
 func (e *Events) Create(dir, evType string, errs ...error) {
-	var errStr string
+	md := map[string]string{
+		"directory": dir,
+		"service":   strings.ReplaceAll(dir, "/", "-"),
+	}
 	if len(errs) > 0 {
-		errStr = errs[0].Error()
+		md["error"] = errs[0].Error()
 	}
 
 	reqBody, _ := json.Marshal(map[string]interface{}{
-		"type": evType,
-		"metadata": map[string]string{
-			"directory": dir,
-			"service":   strings.ReplaceAll(dir, "/", "-"),
-			"error":     errStr,
-		},
+		"type": evType, "metadata": md,
 	})
 
 	req, _ := http.NewRequest("POST", "https://api.micro.mu/events/create", bytes.NewBuffer(reqBody))
