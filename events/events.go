@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 )
 
 func New(clientID, clientSecret string) *Events {
@@ -28,10 +27,7 @@ type Events struct {
 }
 
 func (e *Events) Create(dir, evType string, errs ...error) {
-	md := map[string]string{
-		"directory": dir,
-		"service":   strings.ReplaceAll(dir, "/", "-"),
-	}
+	md := map[string]string{"service": dir}
 	if len(errs) > 0 {
 		md["error"] = errs[0].Error()
 	}
