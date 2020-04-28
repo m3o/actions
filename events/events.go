@@ -51,8 +51,9 @@ func (e *Events) Create(dir, evType string, errs ...error) {
 	}
 	defer rsp.Body.Close()
 
+	bytes, _ := ioutil.ReadAll(rsp.Body)
 	if rsp.StatusCode != http.StatusOK {
-		fmt.Println("Failed Request: " + rsp.Status)
+		fmt.Printf("Request Error. Status: %v. Response: %v\n", rsp.Status, string(bytes))
 	}
 }
 
@@ -74,13 +75,13 @@ func exchangeCreds(clientID, clientSecret string) (string, error) {
 	}
 	defer rsp.Body.Close()
 
-	if rsp.StatusCode != http.StatusOK {
-		return "", errors.New("Bad Credentials")
-	}
-
 	bytes, err := ioutil.ReadAll(rsp.Body)
 	if err != nil {
 		return "", errors.New("Invalid response from Micro API")
+	}
+
+	if rsp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Bad Credentials. Status: %v. Response: %v", rsp.Status, string(bytes))
 	}
 
 	var data struct {
