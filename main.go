@@ -36,14 +36,33 @@ func main() {
 	}
 
 	for dir, status := range dirs {
-		// can't build the image since the source no longer exists
+		// Send the source created/updated/deleted
+		// event. This is important since if the
+		// source has been deleted, the service must
+		// be removed from the runtime however no
+		// build event will fire.
+		var srcStatus string
+		switch status {
+		case changedetector.StatusCreated:
+			srcStatus = "source_created"
+		case changedetector.StatusUpdated:
+			srcStatus = "source_updated"
+		case changedetector.StatusDeleted:
+			srcStatus = "source_deleted"
+		}
+		events.Create(dir, srcStatus)
+
+		// don't build directories which have been
+		// deleted since the source will no longer
+		// be there
 		if status == changedetector.StatusDeleted {
 			continue
 		}
-
 		events.Create(dir, "build_started")
 		fmt.Printf("[%v] Build Starting\n", dir)
 
+		// build the docker image for the directory
+		// and push it to the image repository
 		if err := builder.Build(dir); err != nil {
 			fmt.Printf("[%v] Build Failed: %v\n", dir, err)
 			events.Create(dir, "build_failed", err)
