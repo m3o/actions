@@ -55,7 +55,7 @@ func (e *Events) Create(dir, evType string, errs ...error) {
 
 	bytes, _ := ioutil.ReadAll(rsp.Body)
 	if rsp.StatusCode != http.StatusOK {
-		fmt.Printf("Request Error. Status: %v. Response: %v\n", rsp.Status, string(bytes))
+		panic(fmt.Sprintf("Request Error. Status: %v. Response: %v\n", rsp.Status, string(bytes)))
 	}
 }
 
