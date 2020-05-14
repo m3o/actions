@@ -129,7 +129,7 @@ func (b *Builder) build(dir, tag string) error {
 			continue
 		}
 		if l, ok := lineObj["stream"]; ok {
-			fmt.Printf("[%v] %s\n", dir, l)
+			fmt.Printf("[%v] %s", dir, l)
 		} else if _, ok := lineObj["errorDetail"]; ok {
 			return fmt.Errorf("Error building Docker image: %s", lineObj["error"])
 		}
