@@ -117,8 +117,25 @@ func (b *Builder) build(dir, tag string) error {
 		return jsonmessage.DisplayJSONMessagesStream(buildRsp.Body, os.Stdout, termFd, isTerm, nil)
 	}
 
-	_, err = ioutil.ReadAll(buildRsp.Body)
-	return err
+	rspBytes, err := ioutil.ReadAll(buildRsp.Body)
+	if err != nil {
+		return err
+	}
+
+	// output is a list of json lines
+	for _, line := range strings.Split(string(rspBytes), "\n") {
+		lineObj := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(line), &lineObj); err != nil {
+			continue
+		}
+		if l, ok := lineObj["stream"]; ok {
+			fmt.Printf("[%v] %s\n", dir, l)
+		} else if _, ok := lineObj["errorDetail"]; ok {
+			return fmt.Errorf("Error building Docker image: %s", lineObj["error"])
+		}
+	}
+
+	return nil
 }
 
 // push a tagged image to the image repo
