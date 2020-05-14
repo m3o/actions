@@ -117,8 +117,12 @@ func (b *Builder) build(dir, tag string) error {
 		return jsonmessage.DisplayJSONMessagesStream(buildRsp.Body, os.Stdout, termFd, isTerm, nil)
 	}
 
-	_, err = ioutil.ReadAll(buildRsp.Body)
-	return err
+	rspBytes, err := ioutil.ReadAll(buildRsp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Response is %s", string(rspBytes))
+	return nil
 }
 
 // push a tagged image to the image repo
