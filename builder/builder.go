@@ -123,14 +123,14 @@ func (b *Builder) build(dir, tag string) error {
 	}
 
 	// output is a list of json lines
-	rsp := string(rspBytes)
-	fmt.Printf("Response is %s", rspBytes)
-	for _, line := range strings.Split(rsp, "\n") {
+	for _, line := range strings.Split(string(rspBytes), "\n") {
 		lineObj := map[string]interface{}{}
 		if err := json.Unmarshal([]byte(line), &lineObj); err != nil {
 			continue
 		}
-		if _, ok := lineObj["errorDetail"]; ok {
+		if l, ok := lineObj["stream"]; ok {
+			fmt.Printf("[%v] %s\n", dir, l)
+		} else if _, ok := lineObj["errorDetail"]; ok {
 			return fmt.Errorf("Error building Docker image: %s", lineObj["error"])
 		}
 	}
