@@ -43,6 +43,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(len(dirs))
+	hasErrored := false
 
 	for dir, status := range dirs {
 		f := func(dir string, status changedetector.Status) {
@@ -79,6 +80,7 @@ func main() {
 			if err := builder.Build(dir); err != nil {
 				fmt.Printf("[%v] Build Failed: %v\n", dir, err)
 				events.Create(dir, "build_failed", err)
+				hasErrored = true
 			} else {
 				fmt.Printf("[%v] Build Finished\n", dir)
 				events.Create(dir, "build_finished")
@@ -97,6 +99,9 @@ func main() {
 	}
 
 	wg.Wait()
+	if hasErrored {
+		os.Exit(1)
+	}
 }
 
 func getEnv(key string) string {
