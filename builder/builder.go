@@ -121,6 +121,18 @@ func (b *Builder) build(dir, tag string) error {
 	if err != nil {
 		return err
 	}
+
+	rsp := string(rspBytes)
+	rspArr := strings.Split(rsp, "\n")
+	lastLine := rspArr[len(rspArr)-1]
+	lastLineObj := map[string]interface{}{}
+	if err := json.Unmarshal([]byte(lastLine), &lastLineObj); err != nil {
+		return err
+	}
+	if _, ok := lastLineObj["errorDetail"]; ok {
+		return fmt.Errorf("Error building Docker image: %s", lastLineObj["error"])
+	}
+
 	fmt.Printf("Response is %s", string(rspBytes))
 	return nil
 }
