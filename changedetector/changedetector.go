@@ -3,7 +3,6 @@ package changedetector
 import (
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -116,7 +115,6 @@ func directoryStatuses(statuses []fileToStatus) (map[string]Status, error) {
 			return nil, err
 		}
 		if fileName == "go.mod" {
-			fmt.Printf("Go mod Status is %s\n", status)
 			if status == githubFileChangeStatusCreated {
 				dirs[dir] = StatusCreated
 			} else if status == githubFileChangeStatusRemoved {
