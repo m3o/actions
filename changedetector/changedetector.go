@@ -16,7 +16,7 @@ var (
 )
 
 var (
-	errGoModNotFound = errors.New("Parent go.mod file not found")
+	errGoMainNotFound = errors.New("Parent main.go file not found")
 )
 
 type fileToStatus struct {
@@ -78,7 +78,7 @@ func (cd *ChangeDetector) List() (map[string]Status, error) {
 	for _, v := range commit.Files {
 		// special case. If m3o.yaml is *added* we should build all the things
 		if v.GetFilename() == ".github/workflows/m3o.yaml" && githubFileChangeStatus(v.GetStatus()) == githubFileChangeStatusCreated {
-			return findAllGoModDirs(".")
+			return findAllGoMainDirs(".")
 		}
 
 		// skip files starting with . e.g. ".github"
@@ -95,9 +95,9 @@ func (cd *ChangeDetector) List() (map[string]Status, error) {
 	return directoryStatuses(filesToStatuses)
 }
 
-// findAllGoModDirs records directory of every go.mod file and returns with StatusCreated to force a rebuild of all the things
-func findAllGoModDirs(dirPath string) (map[string]Status, error) {
-	// search for all go.mod files and record their directories
+// findAllGoMainDirs records directory of every main.go file and returns with StatusCreated to force a rebuild of all the things
+func findAllGoMainDirs(dirPath string) (map[string]Status, error) {
+	// search for all main.go files and record their directories
 	ret := map[string]Status{}
 	listing, err := afero.ReadDir(appFS, dirPath)
 	if err != nil {
@@ -105,7 +105,7 @@ func findAllGoModDirs(dirPath string) (map[string]Status, error) {
 	}
 	for _, f := range listing {
 		if f.IsDir() {
-			statuses, err := findAllGoModDirs(dirPath + "/" + f.Name())
+			statuses, err := findAllGoMainDirs(dirPath + "/" + f.Name())
 			if err != nil {
 				return nil, err
 			}
@@ -114,7 +114,7 @@ func findAllGoModDirs(dirPath string) (map[string]Status, error) {
 			}
 			continue
 		}
-		if f.Name() == "go.mod" {
+		if f.Name() == "main.go" {
 			ret[filepath.Clean(dirPath)] = StatusCreated
 		}
 	}
@@ -127,25 +127,25 @@ func findAllGoModDirs(dirPath string) (map[string]Status, error) {
 func directoryStatuses(statuses []fileToStatus) (map[string]Status, error) {
 	dirs := map[string]Status{}
 
-	// Logic. Assume that go.mod is the root of the service or thing to be built. Note not using main.go because sometimes people like to use something else
-	// For every changed file traverse up to find the direct parent go.mod file and record the dir
+	// Logic. Assume that main.go is the root of the service or thing to be built.
+	// For every changed file traverse up to find the direct parent main.go file and record the dir
 	// Dedupe so you only build a dir once.
-	// If go.mod is created or deleted we record that as the service being created or deleted. Everything else is assumed an update
+	// If main.go is created or deleted we record that as the service being created or deleted. Everything else is assumed an update
 
 	for _, status := range statuses {
 		fname := status.fileName
 		status := status.status
 		_, fileName := filepath.Split(fname)
 
-		dir, err := findParentGoModDir(fname)
-		if err != nil && err == errGoModNotFound {
-			// assume that go mod was deleted, skip
+		dir, err := findParentGoMainDir(fname)
+		if err != nil && err == errGoMainNotFound {
+			// assume that go main was deleted, skip
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		if fileName == "go.mod" {
+		if fileName == "main.go" {
 			if status == githubFileChangeStatusCreated {
 				dirs[dir] = StatusCreated
 			} else if status == githubFileChangeStatusRemoved {
@@ -160,16 +160,16 @@ func directoryStatuses(statuses []fileToStatus) (map[string]Status, error) {
 	return dirs, nil
 }
 
-func findParentGoModDir(fileName string) (string, error) {
+func findParentGoMainDir(fileName string) (string, error) {
 	dir, file := filepath.Split(fileName)
 	dir = filepath.Clean(dir)
-	if file == "go.mod" {
+	if file == "main.go" {
 		return dir, nil
 	}
 	for {
 		listing, _ := afero.ReadDir(appFS, dir) // ignore error because it would indicate that dir is missing which is OK
 		for _, f := range listing {
-			if f.Name() == "go.mod" {
+			if f.Name() == "main.go" {
 				return dir, nil
 			}
 		}
@@ -178,6 +178,6 @@ func findParentGoModDir(fileName string) (string, error) {
 			break
 		}
 	}
-	return "", errGoModNotFound
+	return "", errGoMainNotFound
 
 }
