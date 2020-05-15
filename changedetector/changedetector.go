@@ -27,12 +27,15 @@ type fileToStatus struct {
 type githubFileChangeStatus string
 
 // a list of github file status changes.
-// not documented in the github API
+// Sort of documented here https://developer.github.com/v3/repos/commits/#compare-two-commits
+// The response also includes details on the files that were changed between the two commits.
+// This includes the status of the change (for example, if a file was added, removed, modified, or renamed), and details of the change itself.
+// For example, files with a renamed status have a previous_filename field showing the previous filename of the file, and files with a modified status have a patch field showing the changes made to the file.
 var (
 	githubFileChangeStatusCreated  githubFileChangeStatus = "added"
-	githubFileChangeStatusChanged  githubFileChangeStatus = "changed"
 	githubFileChangeStatusModified githubFileChangeStatus = "modified"
 	githubFileChangeStatusRemoved  githubFileChangeStatus = "removed"
+	githubFileChangeStatusRenamed  githubFileChangeStatus = "renamed"
 )
 
 // Status is the status of the service
@@ -73,7 +76,6 @@ func (cd *ChangeDetector) List() (map[string]Status, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	filesToStatuses := []fileToStatus{}
 	for _, v := range commit.Files {
 		// special case. If m3o.yaml is *added* we should build all the things
@@ -85,10 +87,18 @@ func (cd *ChangeDetector) List() (map[string]Status, error) {
 		if strings.HasPrefix(v.GetFilename(), ".") {
 			continue
 		}
-
+		status := githubFileChangeStatus(v.GetStatus())
+		// hack. If file is renamed, treat it as a delete and create so we correctly delete and recreate the services
+		if githubFileChangeStatus(v.GetStatus()) == githubFileChangeStatusRenamed {
+			filesToStatuses = append(filesToStatuses, fileToStatus{
+				fileName: v.GetPreviousFilename(),
+				status:   githubFileChangeStatusRemoved,
+			})
+			status = githubFileChangeStatusCreated
+		}
 		filesToStatuses = append(filesToStatuses, fileToStatus{
 			fileName: v.GetFilename(),
-			status:   githubFileChangeStatus(v.GetStatus()),
+			status:   status,
 		})
 	}
 

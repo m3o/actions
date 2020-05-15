@@ -94,6 +94,35 @@ func TestFolderStatuses(t *testing.T) {
 				"serviceA": StatusDeleted,
 			},
 		},
+		{ // this is what a rename of the whole service should look like
+			input: []fileToStatus{
+				{
+					fileName: "serviceA/main.go", status: githubFileChangeStatusRemoved,
+				},
+				{
+					fileName: "serviceARenamed/main.go", status: githubFileChangeStatusCreated,
+				},
+			},
+			expected: map[string]Status{
+				"serviceA":        StatusDeleted,
+				"serviceARenamed": StatusCreated,
+			},
+		},
+		{ // this is what a rename of a single file, not including the main.go, should look like
+			input: []fileToStatus{
+				{
+					fileName: "serviceA/types/types.go", status: githubFileChangeStatusRemoved,
+				},
+				{
+					fileName: "serviceB/types/types.go", status: githubFileChangeStatusCreated,
+				},
+			},
+			goMainFiles: []string{"serviceA/main.go", "serviceB/main.go"},
+			expected: map[string]Status{
+				"serviceA": StatusUpdated,
+				"serviceB": StatusUpdated,
+			},
+		},
 	}
 	for i, tc := range tcs {
 		// set up the file system
