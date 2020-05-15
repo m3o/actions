@@ -126,3 +126,32 @@ func TestFolderStatuses(t *testing.T) {
 	}
 
 }
+
+func TestFindGoMod(t *testing.T) {
+	tcs := []struct {
+		files    []string
+		expected []string
+	}{
+		{
+			files:    []string{"serviceA/go.mod", "serviceA/main.go", "serviceA/handler/handler.go", "serviceB/go.mod", "serviceB/main.go"},
+			expected: []string{"serviceA", "serviceB"},
+		},
+		{
+			files:    []string{"nested/serviceA/go.mod", "nested/serviceA/main.go", "nested/serviceA/handler/handler.go", "serviceB/go.mod", "serviceB/main.go", "nested/serviceC/go.mod", "nested/serviceC/main.go", "nested/serviceC/some/other/dir/foo.go"},
+			expected: []string{"nested/serviceA", "serviceB", "nested/serviceC"},
+		},
+	}
+	for i, tc := range tcs {
+		appFS = afero.NewMemMapFs()
+		for _, f := range tc.files {
+			afero.WriteFile(appFS, f, []byte("foobar"), 0755)
+		}
+		out, err := findAllGoModDirs(".")
+		assert.NoError(t, err, "Unexpected error finding go mod for test %d", i)
+		expected := map[string]Status{}
+		for _, v := range tc.expected {
+			expected[v] = StatusCreated
+		}
+		assert.Equal(t, expected, out, "Failed test case %d", i)
+	}
+}

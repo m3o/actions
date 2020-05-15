@@ -76,6 +76,11 @@ func (cd *ChangeDetector) List() (map[string]Status, error) {
 
 	filesToStatuses := []fileToStatus{}
 	for _, v := range commit.Files {
+		// special case. If m3o.yaml is *added* we should build all the things
+		if v.GetFilename() == ".github/workflows/m3o.yaml" && githubFileChangeStatus(v.GetStatus()) == githubFileChangeStatusCreated {
+			return findAllGoModDirs(".")
+		}
+
 		// skip files starting with . e.g. ".github"
 		if strings.HasPrefix(v.GetFilename(), ".") {
 			continue
@@ -88,6 +93,32 @@ func (cd *ChangeDetector) List() (map[string]Status, error) {
 	}
 
 	return directoryStatuses(filesToStatuses)
+}
+
+// findAllGoModDirs records directory of every go.mod file and returns with StatusCreated to force a rebuild of all the things
+func findAllGoModDirs(dirPath string) (map[string]Status, error) {
+	// search for all go.mod files and record their directories
+	ret := map[string]Status{}
+	listing, err := afero.ReadDir(appFS, dirPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range listing {
+		if f.IsDir() {
+			statuses, err := findAllGoModDirs(dirPath + "/" + f.Name())
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range statuses {
+				ret[k] = v
+			}
+			continue
+		}
+		if f.Name() == "go.mod" {
+			ret[filepath.Clean(dirPath)] = StatusCreated
+		}
+	}
+	return ret, nil
 }
 
 // maps github file change statuses to directories (or actually services) and their deployment status
@@ -131,9 +162,7 @@ func directoryStatuses(statuses []fileToStatus) (map[string]Status, error) {
 
 func findParentGoModDir(fileName string) (string, error) {
 	dir, file := filepath.Split(fileName)
-	if len(dir) > 0 {
-		dir = dir[:len(dir)-1]
-	} // clean up by removing any trailing slash
+	dir = filepath.Clean(dir)
 	if file == "go.mod" {
 		return dir, nil
 	}
