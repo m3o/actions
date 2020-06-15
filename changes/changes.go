@@ -1,4 +1,4 @@
-package changedetector
+package changes
 
 import (
 	"context"
@@ -47,12 +47,12 @@ var (
 	StatusDeleted Status = "deleted"
 )
 
-func New(ghToken, ghRepo, ghOwner, ghSHA string) *ChangeDetector {
+func New(ghToken, ghRepo, ghOwner, ghSHA string) *Changes {
 	tc := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: ghToken},
 	))
 
-	return &ChangeDetector{
+	return &Changes{
 		client:      github.NewClient(tc),
 		githubRepo:  ghRepo,
 		githubOwner: ghOwner,
@@ -60,7 +60,7 @@ func New(ghToken, ghRepo, ghOwner, ghSHA string) *ChangeDetector {
 	}
 }
 
-type ChangeDetector struct {
+type Changes struct {
 	client      *github.Client
 	githubRepo  string
 	githubOwner string
@@ -70,7 +70,7 @@ type ChangeDetector struct {
 // List uses the github sha to determine all the changes
 // It returns a list of folders which we think represent services that have changed.
 // For example, if serviceA/main.go and serviceB/handler/handler.go have changed but serviceC/ hasn't it should return serviceA and serviceB
-func (cd *ChangeDetector) List() (map[string]Status, error) {
+func (cd *Changes) List() (map[string]Status, error) {
 	repo := strings.TrimPrefix(cd.githubRepo, cd.githubOwner+"/")
 	commit, _, err := cd.client.Repositories.GetCommit(context.Background(), cd.githubOwner, repo, cd.githubSHA)
 	if err != nil {

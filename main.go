@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/micro/actions/builder"
-	"github.com/micro/actions/changedetector"
+	"github.com/micro/actions/changes"
 	"github.com/micro/actions/events"
 )
 
@@ -21,7 +21,7 @@ func main() {
 		debugMode,
 	)
 
-	changes := changedetector.New(
+	change := changes.New(
 		getEnv("INPUT_GITHUB_TOKEN"),
 		getEnv("GITHUB_REPOSITORY"),
 		getEnv("GITHUB_REPOSITORY_OWNER"),
@@ -35,7 +35,7 @@ func main() {
 		getEnv("GITHUB_ACTION"),
 	)
 
-	dirs, err := changes.List()
+	dirs, err := change.List()
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +46,7 @@ func main() {
 	hasErrored := false
 
 	for dir, status := range dirs {
-		f := func(dir string, status changedetector.Status) {
+		f := func(dir string, status changes.Status) {
 			// Send the source created/updated/deleted
 			// event. This is important since if the
 			// source has been deleted, the service must
@@ -54,11 +54,11 @@ func main() {
 			// build event will fire.
 			var srcStatus string
 			switch status {
-			case changedetector.StatusCreated:
+			case changes.StatusCreated:
 				srcStatus = "source_created"
-			case changedetector.StatusUpdated:
+			case changes.StatusUpdated:
 				srcStatus = "source_updated"
-			case changedetector.StatusDeleted:
+			case changes.StatusDeleted:
 				srcStatus = "source_deleted"
 			}
 			events.Create(dir, srcStatus)
@@ -66,7 +66,7 @@ func main() {
 			// don't build directories which have been
 			// deleted since the source will no longer
 			// be there
-			if status == changedetector.StatusDeleted {
+			if status == changes.StatusDeleted {
 				fmt.Printf("[%v] Skipping Build\n", dir)
 				wg.Done()
 				return

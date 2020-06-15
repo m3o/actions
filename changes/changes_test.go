@@ -1,4 +1,4 @@
-package changedetector
+package changes
 
 import (
 	"path"
