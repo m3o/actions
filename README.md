@@ -1,6 +1,6 @@
-# Micro Actions
+# M3O Action
 
-GitHub Actions for Micro Services
+GitHub Actions for M3O Services
 
 ## Overview
 
@@ -25,7 +25,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
       - name: Build Services
-        uses: micro/actions@1.9.22
+        uses: m3o/action@1.9.22
         with:
           CLIENT_ID: ${{ secrets.M3O_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.M3O_CLIENT_SECRET }}
