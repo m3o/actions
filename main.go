@@ -6,9 +6,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/micro/actions/builder"
-	"github.com/micro/actions/changes"
-	"github.com/micro/actions/events"
+	"github.com/m3o/action/builder"
+	"github.com/m3o/action/changes"
+	"github.com/m3o/action/events"
 )
 
 func main() {
