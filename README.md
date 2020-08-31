@@ -25,7 +25,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
       - name: Build Services
-        uses: m3o/action@1.9.22
+        uses: m3o/actions@v2
         with:
           CLIENT_ID: ${{ secrets.M3O_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.M3O_CLIENT_SECRET }}
