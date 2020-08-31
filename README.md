@@ -1,4 +1,4 @@
-# M3O Action
+# M3O GitHub Actions
 
 GitHub Actions for M3O Services
 
